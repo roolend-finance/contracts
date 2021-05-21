@@ -30,7 +30,7 @@ contract RErc20 is RToken, RErc20Interface {
 
         // Set underlying and sanity check it
         underlying = underlying_;
-        //ERC20NonStandardInterface(underlying).totalSupply();
+        ERC20NonStandardInterface(underlying).totalSupply();
     }
 
     /*** User Interface ***/

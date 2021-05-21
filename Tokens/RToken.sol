@@ -695,6 +695,10 @@ contract RToken is RTokenInterface, Exponential, TokenErrorReporter, RErc20Stora
             failOpaque(Error.MATH_ERROR, FailureInfo.BORROW_NEW_ACCOUNT_BORROW_BALANCE_CALCULATION_FAILED, uint(vars.mathErr));
         }
 
+        (vars.mathErr, totalReserves) = addUInt(totalReserves, vars.fee);
+        if (vars.mathErr != MathError.NO_ERROR) {
+            failOpaque(Error.MATH_ERROR, FailureInfo.BORROW_NEW_ACCOUNT_BORROW_BALANCE_CALCULATION_FAILED, uint(vars.mathErr));
+        }
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
@@ -801,6 +805,11 @@ contract RToken is RTokenInterface, Exponential, TokenErrorReporter, RErc20Stora
          * @notice Only report error when calculate totalBorrowFeeCurrent, don't return.
          */
         (vars.mathErr, totalBorrowFeeCurrent) = addUInt(totalBorrowFeeCurrent, vars.fee);
+        if (vars.mathErr != MathError.NO_ERROR) {
+            failOpaque(Error.MATH_ERROR, FailureInfo.BORROW_NEW_ACCOUNT_BORROW_BALANCE_CALCULATION_FAILED, uint(vars.mathErr));
+        }
+
+        (vars.mathErr, totalReserves) = addUInt(totalReserves, vars.fee);
         if (vars.mathErr != MathError.NO_ERROR) {
             failOpaque(Error.MATH_ERROR, FailureInfo.BORROW_NEW_ACCOUNT_BORROW_BALANCE_CALCULATION_FAILED, uint(vars.mathErr));
         }
@@ -1405,6 +1414,8 @@ contract RToken is RTokenInterface, Exponential, TokenErrorReporter, RErc20Stora
             totalRedeemFeeCurrent = sub_(totalFeeCurrent, amount);
             totalBorrowFeeCurrent = uint(0);
         }
+
+        totalReserves = sub_(totalReserves, amount);
 
         address payable feeManager = comptroller.getFeeManager();
 

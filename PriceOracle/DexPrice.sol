@@ -45,7 +45,7 @@ contract DexPrice is PriceOracle {
         if (_address == usdt) {
             return BASE_DECIMAL;
         }
-        return IDexPair(underlyingExchange[_address]).price(_address, BASE_DECIMAL);
+        return price(_address, BASE_DECIMAL);
     }
 
     function getPriceBaseDecimals(address _address) public view returns (uint){
@@ -55,7 +55,7 @@ contract DexPrice is PriceOracle {
         ERC20NonStandardInterface token0 = ERC20NonStandardInterface(_address);
         ERC20NonStandardInterface token1 = ERC20NonStandardInterface(usdt);
         uint decimal = 10 ** uint((BASE_DECIMAL + token0.decimals() - token1.decimals()));
-        return IDexPair(underlyingExchange[_address]).price(_address, decimal);
+        return price(_address, decimal);
     }
 
     function setUnderlyingExchange(address underlying, address exchange) external {
@@ -66,6 +66,22 @@ contract DexPrice is PriceOracle {
     function addSwapLp(address _pairaddress) external {
         require(msg.sender == admin, "must admin");
         swapLps[_pairaddress] = true;
+    }
+
+    function price(address _address, uint256 baseDecimal) public view returns (uint256) {
+        address token0 = IDexPair(underlyingExchange[_address]).token0();
+        address token1 = IDexPair(underlyingExchange[_address]).token1();
+        (uint112 reserve0, uint112 reserve1, ) = IDexPair(underlyingExchange[_address]).getReserves();
+
+
+        if ((token0 != _address && token1 != _address) || 0 == reserve0 || 0 == reserve1) {
+            return 0;
+        }
+        if (token0 == _address) {
+            return uint256(reserve1).mul(baseDecimal).div(uint256(reserve0));
+        } else {
+            return uint256(reserve0).mul(baseDecimal).div(uint256(reserve1));
+        }
     }
 
     function calLpPrice(address _pairAddress) public view returns (uint){
