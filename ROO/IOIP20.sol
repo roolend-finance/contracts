@@ -10,10 +10,10 @@ interface IOIP20 {
 
     function allowance(address owner, address spender) external view returns (uint256 remaining);
 
-    // 事件，用来通知客户端交易发生 ERC20标准
+    // 事件，用来通知客户端交易发生 OIP20标准
     event Transfer(address indexed from, address indexed to, uint256 value);
 
-    // 事件，用来通知客户端代币被消费 ERC20标准
+    // 事件，用来通知客户端代币被消费 OIP20标准
     event Burn(address indexed from, uint256 value);
 
 

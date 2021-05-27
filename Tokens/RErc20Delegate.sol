@@ -4,7 +4,7 @@ import "./RErc20.sol";
 
 /**
  * @title Compound's CErc20Delegate Contract
- * @notice CTokens which wrap an EIP-20 underlying and are delegated to
+ * @notice RTokens which wrap an EIP-20 underlying and are delegated to
  * @author Compound
  */
 contract RErc20Delegate is RErc20, RDelegateInterface {

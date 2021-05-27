@@ -29,8 +29,8 @@ contract DexPrice is PriceOracle {
         admin = msg.sender;
     }
 
-    function getUnderlyingPrice(RToken cToken) external view returns (uint){
-        address _underlying = cToken.underlying();
+    function getUnderlyingPrice(RToken rToken) external view returns (uint){
+        address _underlying = rToken.underlying();
         if (swapLps[_underlying]) {
             return calLpPrice(_underlying);
         }
@@ -65,6 +65,7 @@ contract DexPrice is PriceOracle {
 
     function addSwapLp(address _pairaddress) external {
         require(msg.sender == admin, "must admin");
+        require(_pairaddress != address(0));
         swapLps[_pairaddress] = true;
     }
 

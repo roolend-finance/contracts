@@ -69,33 +69,33 @@ contract PriceOracleProxy is PriceOracle {
     }
 
     /**
-     * @notice Get the underlying price of a listed cToken asset
-     * @param cToken The cToken to get the underlying price of
+     * @notice Get the underlying price of a listed rToken asset
+     * @param rToken The rToken to get the underlying price of
      * @return The underlying asset price mantissa (scaled by 1e18)
      */
-    function getUnderlyingPrice(RToken cToken) public view returns (uint) {
-        address cTokenAddress = address(cToken);
+    function getUnderlyingPrice(RToken rToken) public view returns (uint) {
+        address rTokenAddress = address(rToken);
 
-        if (cTokenAddress == cEthAddress) {
+        if (rTokenAddress == cEthAddress) {
             // ether always worth 1
             return 1e18;
         }
 
-        if (cTokenAddress == cUsdcAddress || cTokenAddress == cUsdtAddress) {
+        if (rTokenAddress == cUsdcAddress || rTokenAddress == cUsdtAddress) {
             return v1PriceOracle.assetPrices(usdcOracleKey);
         }
 
-        if (cTokenAddress == cDaiAddress) {
+        if (rTokenAddress == cDaiAddress) {
             return v1PriceOracle.assetPrices(daiOracleKey);
         }
 
-        if (cTokenAddress == cSaiAddress) {
+        if (rTokenAddress == cSaiAddress) {
             // use the frozen SAI price if set, otherwise use the DAI price
             return saiPrice > 0 ? saiPrice : v1PriceOracle.assetPrices(daiOracleKey);
         }
 
         // otherwise just read from v1 oracle
-        address underlying = RErc20(cTokenAddress).underlying();
+        address underlying = RErc20(rTokenAddress).underlying();
         return v1PriceOracle.assetPrices(underlying);
     }
 

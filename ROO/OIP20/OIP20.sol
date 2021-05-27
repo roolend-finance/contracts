@@ -20,21 +20,21 @@ contract OIP20 is Context, IOIP20 {
     uint256 private _totalSupply;
 
     /**
-     * @dev See {IERC20-totalSupply}.
+     * @dev See {IOIP20-totalSupply}.
      */
     function totalSupply() public view returns (uint256) {
         return _totalSupply;
     }
 
     /**
-     * @dev See {IERC20-balanceOf}.
+     * @dev See {IOIP20-balanceOf}.
      */
     function balanceOf(address account) public view returns (uint256) {
         return _balances[account];
     }
 
     /**
-     * @dev See {IERC20-transfer}.
+     * @dev See {IOIP20-transfer}.
      *
      * Requirements:
      *
@@ -47,14 +47,14 @@ contract OIP20 is Context, IOIP20 {
     }
 
     /**
-     * @dev See {IERC20-allowance}.
+     * @dev See {IOIP20-allowance}.
      */
     function allowance(address owner, address spender) public view returns (uint256) {
         return _allowances[owner][spender];
     }
 
     /**
-     * @dev See {IERC20-approve}.
+     * @dev See {IOIP20-approve}.
      *
      * Requirements:
      *
@@ -66,10 +66,10 @@ contract OIP20 is Context, IOIP20 {
     }
 
     /**
-     * @dev See {IERC20-transferFrom}.
+     * @dev See {IOIP20-transferFrom}.
      *
      * Emits an {Approval} event indicating the updated allowance. This is not
-     * required by the EIP. See the note at the beginning of {ERC20};
+     * required by the EIP. See the note at the beginning of {OIP20};
      *
      * Requirements:
      * - `sender` and `recipient` cannot be the zero address.
@@ -79,7 +79,7 @@ contract OIP20 is Context, IOIP20 {
      */
     function transferFrom(address sender, address recipient, uint256 amount) public returns (bool) {
         _transfer(sender, recipient, amount);
-        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "ERC20: transfer amount exceeds allowance"));
+        _approve(sender, _msgSender(), _allowances[sender][_msgSender()].sub(amount, "OIP20: transfer amount exceeds allowance"));
         return true;
     }
 
@@ -87,7 +87,7 @@ contract OIP20 is Context, IOIP20 {
      * @dev Atomically increases the allowance granted to `spender` by the caller.
      *
      * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
+     * problems described in {IOIP20-approve}.
      *
      * Emits an {Approval} event indicating the updated allowance.
      *
@@ -104,7 +104,7 @@ contract OIP20 is Context, IOIP20 {
      * @dev Atomically decreases the allowance granted to `spender` by the caller.
      *
      * This is an alternative to {approve} that can be used as a mitigation for
-     * problems described in {IERC20-approve}.
+     * problems described in {IOIP20-approve}.
      *
      * Emits an {Approval} event indicating the updated allowance.
      *
@@ -115,7 +115,7 @@ contract OIP20 is Context, IOIP20 {
      * `subtractedValue`.
      */
     function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
-        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+        _approve(_msgSender(), spender, _allowances[_msgSender()][spender].sub(subtractedValue, "OIP20: decreased allowance below zero"));
         return true;
     }
 
@@ -134,10 +134,10 @@ contract OIP20 is Context, IOIP20 {
      * - `sender` must have a balance of at least `amount`.
      */
     function _transfer(address sender, address recipient, uint256 amount) internal {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(sender != address(0), "OIP20: transfer from the zero address");
+        require(recipient != address(0), "OIP20: transfer to the zero address");
 
-        _balances[sender] = _balances[sender].sub(amount, "ERC20: transfer amount exceeds balance");
+        _balances[sender] = _balances[sender].sub(amount, "OIP20: transfer amount exceeds balance");
         _balances[recipient] = _balances[recipient].add(amount);
         emit Transfer(sender, recipient, amount);
     }
@@ -152,7 +152,7 @@ contract OIP20 is Context, IOIP20 {
      * - `to` cannot be the zero address.
      */
     function _mint(address account, uint256 amount) internal {
-        require(account != address(0), "ERC20: mint to the zero address");
+        require(account != address(0), "OIP20: mint to the zero address");
 
         _totalSupply = _totalSupply.add(amount);
         _balances[account] = _balances[account].add(amount);
@@ -171,9 +171,9 @@ contract OIP20 is Context, IOIP20 {
      * - `account` must have at least `amount` tokens.
      */
     function _burn(address account, uint256 amount) internal returns (bool success) {
-        require(account != address(0), "ERC20: burn from the zero address");
+        require(account != address(0), "OIP20: burn from the zero address");
 
-        _balances[account] = _balances[account].sub(amount, "ERC20: burn amount exceeds balance");
+        _balances[account] = _balances[account].sub(amount, "OIP20: burn amount exceeds balance");
         _totalSupply = _totalSupply.sub(amount);
         emit Transfer(account, address(0), amount);
         return true;
@@ -193,8 +193,8 @@ contract OIP20 is Context, IOIP20 {
      * - `spender` cannot be the zero address.
      */
     function _approve(address owner, address spender, uint256 amount) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0), "OIP20: approve from the zero address");
+        require(spender != address(0), "OIP20: approve to the zero address");
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
@@ -216,7 +216,7 @@ contract OIP20 is Context, IOIP20 {
      */
     function _burnFrom(address account, uint256 amount) internal returns (bool success) {
         _burn(account, amount);
-        _approve(account, _msgSender(), _allowances[account][_msgSender()].sub(amount, "ERC20: burn amount exceeds allowance"));
+        _approve(account, _msgSender(), _allowances[account][_msgSender()].sub(amount, "OIP20: burn amount exceeds allowance"));
         return true;
     }
 }

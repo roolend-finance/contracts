@@ -3,7 +3,7 @@ pragma solidity ^0.5.16;
 import "../Comptroller/ComptrollerInterface.sol";
 import "../Math/SafeMath.sol";
 import "../Controller/Controller.sol";
-import "../Okexchain/ROO.sol";
+import "../ROO/ROO.sol";
 
 contract Reservoir is Controller {
     using SafeMath for uint256;
@@ -21,12 +21,18 @@ contract Reservoir is Controller {
     uint256 constant MAX_RATE = 1e18;
     // 每块最小出币数量
     uint256 constant MIN_ROO_PER_BLOCK = 0.2 * 1e18;
+    bool isFunded = false;
     // 团队奖励10%
-    uint256 constant TEAM_FUND_DIV_RATE = 10e16;
+    uint256 constant TEAM_FUND_DIV_RATE = 7e16;
+    uint256 constant INVESTOR_DIV_RATE = 3e16;
+    uint256 constant INVESTOR_INIT_FUND_RATIO = 15e16;
+    address investorAddr = address(0xF663d68Be3D62697C97583E672b79278a7d0758c);
+    uint256 fundLastBlockForInvestor;
     // 风险基金5%
     uint256 constant INSURANCE_FUND_DIV_RATE = 5e16;
     // 市场运营推广5%
-    uint256 constant MARKETS_FUND_DIV_RATE = 5e16;
+    uint256 constant MARKETS_FUND_DIV_RATE = 4e16;
+    uint256 constant MARKETS_FUND_INIT_DIV_RATE = 1e16;
     // 流动性挖矿80%
     uint256 constant LIQUIDITY_FUND_DIV_RATE = 80e16;
 
@@ -50,8 +56,6 @@ contract Reservoir is Controller {
     uint256 public comptrollerLastReward;
 
     uint256 public duration;
-
-    bool testOnly;
 
     // Events
     event Recovered(address token, uint256 amount);
@@ -101,6 +105,7 @@ contract Reservoir is Controller {
         rewardToken = _rewardToken;
         startBlock = _startBlock;
         fundLastRewardBlock = _startBlock;
+        fundLastBlockForInvestor = _startBlock;
         duration = _duration;
     }
 
@@ -109,14 +114,6 @@ contract Reservoir is Controller {
      */
     function mintToken() public onlyOwner {
         rewardToken.mint(address(this));
-    }
-
-    function _setTestAddress(address _compatAddress) external {
-        teamAddr = _compatAddress;
-        marketAddr = _compatAddress;
-        insuranceAddr = _compatAddress;
-        comptroller = ComptrollerInterface(_compatAddress);
-        testOnly = true;
     }
 
     modifier adjustProduct() {
@@ -139,17 +136,10 @@ contract Reservoir is Controller {
 
         if (comptrollerLastReward < block.number) {
             uint256 _reward = duration.mul(tokenPerBlock);
-
-            uint256 marketFund = calRate(_reward, MARKETS_FUND_DIV_RATE);
-            uint256 insuranceFund = calRate(_reward, INSURANCE_FUND_DIV_RATE);
-            uint256 teamFund = calRate(_reward, TEAM_FUND_DIV_RATE);
-
-            uint256 liquidityFund = _reward.sub(marketFund.add(insuranceFund).add(teamFund));
+            uint256 liquidityFund = calRate(_reward, LIQUIDITY_FUND_DIV_RATE);
             if (address(comptroller) != address(0)) {
                 safeTokenTransfer(address(comptroller), liquidityFund);
-                if (!testOnly) {
-                    ComptrollerInterface(comptroller)._setCompRate(calRate(tokenPerBlock, LIQUIDITY_FUND_DIV_RATE));
-                }
+                ComptrollerInterface(comptroller)._setCompRate(calRate(tokenPerBlock, LIQUIDITY_FUND_DIV_RATE));
                 comptrollerLastReward = block.number.add(duration);
                 emit DestributedRewards(
                     RecipientType.LIQUIDITY,
@@ -165,11 +155,7 @@ contract Reservoir is Controller {
     /**
         @notice 计算分配比例
      */
-    function calRate(uint256 _amount, uint256 rate)
-        public
-        view
-        returns (uint256)
-    {
+    function calRate(uint256 _amount, uint256 rate) public pure returns (uint256) {
         return _amount.mul(rate).div(1e18);
     }
 
@@ -202,6 +188,30 @@ contract Reservoir is Controller {
         insuranceAddr = account;
     }
 
+    function claimFundForMarketAndInvestors() public {
+        require(!isFunded, "funded");
+        uint256 pickleBal = rewardToken.balanceOf(address(this));
+        uint256 marketFund = calRate(rewardToken.totalSupply(), MARKETS_FUND_INIT_DIV_RATE);
+        uint256 investorFundIndex = calRate(INVESTOR_DIV_RATE, INVESTOR_INIT_FUND_RATIO);
+        uint256 investorFund = calRate(rewardToken.totalSupply(), investorFundIndex);
+        uint256 totalFund = marketFund.add(investorFund);
+        require(pickleBal >= totalFund, "pickleBal < totalFund");
+        isFunded = true;
+        rewardToken.transfer(investorAddr, totalFund);
+    }
+
+    function claimFundForInvestor() public {
+        uint256 nextRewardBlock = fundLastBlockForInvestor.add(PER30DAYS);
+        require (block.number >= nextRewardBlock, "current block is smaller than next reward block");
+        uint256 totalAmount = calRate(rewardToken.totalSupply(), INVESTOR_DIV_RATE);
+        uint256 initInvestorAmount = calRate(totalAmount, INVESTOR_INIT_FUND_RATIO);
+        uint256 amount = totalAmount.sub(initInvestorAmount).div(12);
+        uint256 pickleBal = rewardToken.balanceOf(address(this));
+        require(pickleBal >= amount, "pickleBal < totalFund");
+        rewardToken.transfer(investorAddr, amount);
+        fundLastBlockForInvestor = nextRewardBlock;
+    }
+
     /**
         @notice 分发流动性挖矿奖励
      */
@@ -228,7 +238,7 @@ contract Reservoir is Controller {
         // calculate the team rewards according to the TEAM_FUND_DIV_RATE
         uint256 teamFund = calRate(boxReward, TEAM_FUND_DIV_RATE);
         // calculate the liquidity rewards according to the LIQUIDITY_FUND_DIV_RATE
-        uint256 liquidityFund = calRate(boxReward, LIQUIDITY_FUND_DIV_RATE);
+        // uint256 liquidityFund = calRate(boxReward, LIQUIDITY_FUND_DIV_RATE);
 
         // transfer token to market
         safeTokenTransfer(marketAddr, marketFund);

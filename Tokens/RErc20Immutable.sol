@@ -4,7 +4,7 @@ import "./RErc20.sol";
 
 /**
  * @title Compound's CErc20Immutable Contract
- * @notice CTokens which wrap an EIP-20 underlying and are immutable
+ * @notice RTokens which wrap an EIP-20 underlying and are immutable
  * @author Compound
  */
 contract RErc20Immutable is RErc20 {

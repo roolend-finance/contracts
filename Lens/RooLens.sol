@@ -6,7 +6,8 @@ import "../PriceOracle/PriceOracle.sol";
 import "../Governance/GovernorAlpha.sol";
 import "../Tokens/RToken.sol";
 import "../Tokens/ERC20NonStandardInterface.sol";
-import "../Okexchain/ROO.sol";
+import "../Tokens/NativeAddress.sol";
+import "../ROO/ROO.sol";
 
 interface ComptrollerLensInterface {
     function markets(address) external view returns (bool, uint);
@@ -19,7 +20,7 @@ interface ComptrollerLensInterface {
 
 contract RoolendLens {
     struct RTokenMetadata {
-        address cToken;
+        address rToken;
         uint exchangeRateCurrent;
         uint supplyRatePerBlock;
         uint borrowRatePerBlock;
@@ -31,18 +32,19 @@ contract RoolendLens {
         bool isListed;
         uint collateralFactorMantissa;
         address underlyingAssetAddress;
-        uint cTokenDecimals;
+        uint rTokenDecimals;
         uint underlyingDecimals;
     }
 
-    function cTokenMetadata(RToken rToken) public returns (RTokenMetadata memory) {
+    function rTokenMetadata(RToken rToken) public returns (RTokenMetadata memory) {
         uint exchangeRateCurrent = rToken.exchangeRateCurrent();
         ComptrollerLensInterface comptroller = ComptrollerLensInterface(address(rToken.comptroller()));
         (bool isListed, uint collateralFactorMantissa) = comptroller.markets(address(rToken));
         address underlyingAssetAddress;
         uint underlyingDecimals;
+        address underlying = rToken.underlying();
 
-        if (compareStrings(rToken.symbol(), "cETH")) {
+        if (underlying == NativeAddress.nativeAddress()) {
             underlyingAssetAddress = address(0);
             underlyingDecimals = 18;
         } else {
@@ -52,7 +54,7 @@ contract RoolendLens {
         }
 
         return RTokenMetadata({
-            cToken: address(rToken),
+            rToken: address(rToken),
             exchangeRateCurrent: exchangeRateCurrent,
             supplyRatePerBlock: rToken.supplyRatePerBlock(),
             borrowRatePerBlock: rToken.borrowRatePerBlock(),
@@ -64,22 +66,22 @@ contract RoolendLens {
             isListed: isListed,
             collateralFactorMantissa: collateralFactorMantissa,
             underlyingAssetAddress: underlyingAssetAddress,
-            cTokenDecimals: rToken.decimals(),
+            rTokenDecimals: rToken.decimals(),
             underlyingDecimals: underlyingDecimals
         });
     }
 
-    function cTokenMetadataAll(RToken[] calldata cTokens) external returns (RTokenMetadata[] memory) {
-        uint cTokenCount = cTokens.length;
-        RTokenMetadata[] memory res = new RTokenMetadata[](cTokenCount);
-        for (uint i = 0; i < cTokenCount; i++) {
-            res[i] = cTokenMetadata(cTokens[i]);
+    function rTokenMetadataAll(RToken[] calldata rTokens) external returns (RTokenMetadata[] memory) {
+        uint rTokenCount = rTokens.length;
+        RTokenMetadata[] memory res = new RTokenMetadata[](rTokenCount);
+        for (uint i = 0; i < rTokenCount; i++) {
+            res[i] = rTokenMetadata(rTokens[i]);
         }
         return res;
     }
 
     struct RTokenBalances {
-        address cToken;
+        address rToken;
         uint balanceOf;
         uint borrowBalanceCurrent;
         uint balanceOfUnderlying;
@@ -87,25 +89,25 @@ contract RoolendLens {
         uint tokenAllowance;
     }
 
-    function cTokenBalances(RToken cToken, address payable account) public returns (RTokenBalances memory) {
-        uint balanceOf = cToken.balanceOf(account);
-        uint borrowBalanceCurrent = cToken.borrowBalanceCurrent(account);
-        uint balanceOfUnderlying = cToken.balanceOfUnderlying(account);
+    function rTokenBalances(RToken rToken, address payable account) public returns (RTokenBalances memory) {
+        uint balanceOf = rToken.balanceOf(account);
+        uint borrowBalanceCurrent = rToken.borrowBalanceCurrent(account);
+        uint balanceOfUnderlying = rToken.balanceOfUnderlying(account);
         uint tokenBalance;
         uint tokenAllowance;
 
-        if (compareStrings(cToken.symbol(), "cETH")) {
+        if (compareStrings(rToken.symbol(), "cETH")) {
             tokenBalance = account.balance;
             tokenAllowance = account.balance;
         } else {
-            RErc20 cErc20 = RErc20(address(cToken));
+            RErc20 cErc20 = RErc20(address(rToken));
             ERC20NonStandardInterface underlying = ERC20NonStandardInterface(cErc20.underlying());
             tokenBalance = underlying.balanceOf(account);
-            tokenAllowance = underlying.allowance(account, address(cToken));
+            tokenAllowance = underlying.allowance(account, address(rToken));
         }
 
         return RTokenBalances({
-            cToken: address(cToken),
+            rToken: address(rToken),
             balanceOf: balanceOf,
             borrowBalanceCurrent: borrowBalanceCurrent,
             balanceOfUnderlying: balanceOfUnderlying,
@@ -114,35 +116,35 @@ contract RoolendLens {
         });
     }
 
-    function cTokenBalancesAll(RToken[] calldata cTokens, address payable account) external returns (RTokenBalances[] memory) {
-        uint cTokenCount = cTokens.length;
-        RTokenBalances[] memory res = new RTokenBalances[](cTokenCount);
-        for (uint i = 0; i < cTokenCount; i++) {
-            res[i] = cTokenBalances(cTokens[i], account);
+    function rTokenBalancesAll(RToken[] calldata rTokens, address payable account) external returns (RTokenBalances[] memory) {
+        uint rTokenCount = rTokens.length;
+        RTokenBalances[] memory res = new RTokenBalances[](rTokenCount);
+        for (uint i = 0; i < rTokenCount; i++) {
+            res[i] = rTokenBalances(rTokens[i], account);
         }
         return res;
     }
 
     struct RTokenUnderlyingPrice {
-        address cToken;
+        address rToken;
         uint underlyingPrice;
     }
 
-    function cTokenUnderlyingPrice(RToken cToken) public returns (RTokenUnderlyingPrice memory) {
-        ComptrollerLensInterface comptroller = ComptrollerLensInterface(address(cToken.comptroller()));
+    function rTokenUnderlyingPrice(RToken rToken) public returns (RTokenUnderlyingPrice memory) {
+        ComptrollerLensInterface comptroller = ComptrollerLensInterface(address(rToken.comptroller()));
         PriceOracle priceOracle = comptroller.oracle();
 
         return RTokenUnderlyingPrice({
-            cToken: address(cToken),
-            underlyingPrice: priceOracle.getUnderlyingPrice(cToken)
+            rToken: address(rToken),
+            underlyingPrice: priceOracle.getUnderlyingPrice(rToken)
         });
     }
 
-    function cTokenUnderlyingPriceAll(RToken[] calldata cTokens) external returns (RTokenUnderlyingPrice[] memory) {
-        uint cTokenCount = cTokens.length;
-        RTokenUnderlyingPrice[] memory res = new RTokenUnderlyingPrice[](cTokenCount);
-        for (uint i = 0; i < cTokenCount; i++) {
-            res[i] = cTokenUnderlyingPrice(cTokens[i]);
+    function rTokenUnderlyingPriceAll(RToken[] calldata rTokens) external returns (RTokenUnderlyingPrice[] memory) {
+        uint rTokenCount = rTokens.length;
+        RTokenUnderlyingPrice[] memory res = new RTokenUnderlyingPrice[](rTokenCount);
+        for (uint i = 0; i < rTokenCount; i++) {
+            res[i] = rTokenUnderlyingPrice(rTokens[i]);
         }
         return res;
     }

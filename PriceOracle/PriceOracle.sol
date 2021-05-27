@@ -7,10 +7,10 @@ contract PriceOracle {
     bool public constant isPriceOracle = true;
 
     /**
-      * @notice Get the underlying price of a cToken asset
-      * @param cToken The cToken to get the underlying price of
+      * @notice Get the underlying price of a rToken asset
+      * @param rToken The rToken to get the underlying price of
       * @return The underlying asset price mantissa (scaled by 1e18).
       *  Zero means the price is unavailable.
       */
-    function getUnderlyingPrice(RToken cToken) external view returns (uint);
+    function getUnderlyingPrice(RToken rToken) external view returns (uint);
 }

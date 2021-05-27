@@ -46,7 +46,7 @@ contract RTokenStorage {
     address payable public pendingAdmin;
 
     /**
-     * @notice Contract which oversees inter-cToken operations
+     * @notice Contract which oversees inter-rToken operations
      */
     ComptrollerInterface public comptroller;
 
@@ -56,7 +56,7 @@ contract RTokenStorage {
     InterestRateModel public interestRateModel;
 
     /**
-     * @notice Initial exchange rate used when minting the first CTokens (used when totalSupply = 0)
+     * @notice Initial exchange rate used when minting the first RTokens (used when totalSupply = 0)
      */
     uint internal initialExchangeRateMantissa;
 
@@ -124,9 +124,9 @@ contract RTokenStorage {
 
 contract RTokenInterface is RTokenStorage {
     /**
-     * @notice Indicator that this is a CToken contract (for inspection)
+     * @notice Indicator that this is a RToken contract (for inspection)
      */
-    bool public constant isCToken = true;
+    bool public constant isRToken = true;
 
 
     /*** Market Events ***/
@@ -159,7 +159,7 @@ contract RTokenInterface is RTokenStorage {
     /**
      * @notice Event emitted when a borrow is liquidated
      */
-    event LiquidateBorrow(address liquidator, address borrower, uint repayAmount, address cTokenCollateral, uint seizeTokens);
+    event LiquidateBorrow(address liquidator, address borrower, uint repayAmount, address rTokenCollateral, uint seizeTokens);
 
 
     /*** Admin Events ***/
@@ -253,7 +253,7 @@ contract RTokenInterface is RTokenStorage {
 
 contract RErc20Storage {
     /**
-     * @notice Underlying asset for this CToken
+     * @notice Underlying asset for this RToken
      */
     address public underlying;
 }
@@ -268,7 +268,7 @@ contract RErc20Interface is RErc20Storage {
     function borrow(uint borrowAmount) external returns (uint);
     function repayBorrow(uint repayAmount) external returns (uint);
     function repayBorrowBehalf(address borrower, uint repayAmount) external returns (uint);
-    function liquidateBorrow(address borrower, uint repayAmount, RTokenInterface cTokenCollateral) external returns (uint);
+    function liquidateBorrow(address borrower, uint repayAmount, RTokenInterface rTokenCollateral) external returns (uint);
 
 
     /*** Admin Functions ***/

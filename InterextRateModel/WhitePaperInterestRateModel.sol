@@ -15,8 +15,10 @@ contract WhitePaperInterestRateModel is InterestRateModel {
 
     /**
      * @notice The approximate number of blocks per year that is assumed by the interest rate model
+     * BSC/HSC/HECO chain，blocksPerYear = 10512000
+     * ETH chain, blocksPerYear = 2102400
      */
-    uint public constant blocksPerYear = 10512000; //;2102400
+    uint public constant blocksPerYear = 10512000;
 
     /**
      * @notice The multiplier of utilization rate that gives the slope of the interest rate
