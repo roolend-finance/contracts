@@ -86,19 +86,19 @@ contract RlPriceOracle is PriceOracle, IPriceCollector {
     }
 
     function calLpPrice(address _pairAddress) public view returns (uint){
-        uint _token0Price = getPrice(IDexPair(_pairAddress).token0());
-        uint _token1Price = getPrice(IDexPair(_pairAddress).token1());
+        uint256 _token0Price = getPrice(IDexPair(_pairAddress).token0());
+        uint256 _token1Price = getPrice(IDexPair(_pairAddress).token1());
 
         (uint112 reserve0, uint112 reserve1, ) = IDexPair(underlyingExchange[_pairAddress]).getReserves();
-        uint256 K = reserve0 * reserve1;
-        uint256 P = _token0Price * BASE_DECIMAL / _token1Price;
+        uint256 K = uint256(reserve0).mul(uint256(reserve1));
+        uint256 P = _token0Price.mul(BASE_DECIMAL).div(_token1Price);
 
         uint256 r0 = sqrt(K.mul(BASE_DECIMAL).div(P));
         uint256 r1 = sqrt(K.mul(P).div(BASE_DECIMAL));
 
         uint _totalSupply = IDexPair(_pairAddress).totalSupply().div(10 ** uint(IDexPair(_pairAddress).decimals()));
 
-        uint256 lpPrice = uint256(2).mul(sqrt(r0.mul(r1))).mul(sqrt(_token0Price.mul(_token1Price))).div(_totalSupply);
+        uint256 lpPrice = uint256(2).mul(sqrt(K)).mul(sqrt(_token0Price.mul(_token1Price))).div(_totalSupply);
 
         return lpPrice;
     }
@@ -109,12 +109,12 @@ contract RlPriceOracle is PriceOracle, IPriceCollector {
         priceAdmin = newAdmin;
     }
 
-    function sqrt(uint x) public pure returns(uint) {
-        uint z = (x + 1 ) / 2;
-        uint y = x;
+    function sqrt(uint256 x) public pure returns(uint256) {
+        uint256 z = x.add(1).div(2); //(x + 1 ) / 2;
+        uint256 y = x;
         while(z < y){
             y = z;
-            z = ( x / z + z ) / 2;
+            z = x.div(z).add(z).div(2);//( x / z + z ) / 2;
         }
         return y;
     }
