@@ -77,9 +77,6 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
     // liquidationIncentiveMantissa must be no greater than this value
     uint internal constant liquidationIncentiveMaxMantissa = 1.5e18; // 1.5
 
-    uint public comBorrowRatio;
-    uint public comSupplyRatio;
-
     constructor() public {
         admin = msg.sender;
     }
@@ -1091,6 +1088,20 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
         refreshCompSpeedsInternal();
     }
 
+    struct Ratio {
+        uint borrow;
+        uint supply;
+    }
+    mapping(address => Ratio) public marketRatio;
+    //Need to ensure that the sum is less than or equal to 100, but did not check
+    function _setMarketRatio(address rToken, uint borrowRatio, uint supplyRatio) external {
+        require(admin == msg.sender, "not admin");
+        marketRatio[rToken] = Ratio({
+        borrow: borrowRatio,
+        supply: supplyRatio
+        });
+    }
+
     function refreshCompSpeedsInternal() internal {
         RToken[] memory allMarkets_ = allMarkets;
 
@@ -1101,23 +1112,10 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
             updateCompBorrowIndex(address(rToken), borrowIndex);
         }
 
-        Exp memory totalUtility = Exp({mantissa: 0});
-        Exp[] memory utilities = new Exp[](allMarkets_.length);
-        for (uint i = 0; i < allMarkets_.length; i++) {
-            RToken rToken = allMarkets_[i];
-            if (markets[address(rToken)].isComped) {
-                Exp memory assetPrice = Exp({mantissa: oracle.getUnderlyingPrice(rToken)});
-                uint rTokenUtility = rToken.totalBorrows();//add_(rToken.totalBorrows(), div_(mul_(sub_(rToken.getCash(), rToken.totalReserves()), comSupplyRatio), expScale));
-                Exp memory utility = mul_(assetPrice, rTokenUtility);
-                utilities[i] = utility;
-                totalUtility = add_(totalUtility, utility);
-            }
-        }
-
         for (uint i = 0; i < allMarkets_.length; i++) {
             RToken rToken = allMarkets[i];
             uint comTokenRate = compRate;
-            uint newSpeed = totalUtility.mantissa > 0 ? mul_(comTokenRate, div_(utilities[i], totalUtility)) : 0;
+            uint newSpeed = mul_(comTokenRate, add_(marketRatio[address(rToken)].borrow, marketRatio[address(rToken)].supply)) ;
             compSpeeds[address(rToken)] = newSpeed;
             emit CompSpeedUpdated(rToken, newSpeed);
         }
@@ -1129,7 +1127,7 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
      */
     function updateCompSupplyIndex(address rToken) internal {
         CompMarketState storage supplyState = compSupplyState[rToken];
-        uint supplySpeed = div_(mul_(compSpeeds[rToken], comSupplyRatio), expScale);
+        uint supplySpeed = div_(mul_(compSpeeds[rToken], marketRatio[address(rToken)].supply), expScale);
         uint blockNumber = getBlockNumber();
         uint deltaBlocks = sub_(blockNumber, uint(supplyState.block));
         if (deltaBlocks > 0 && supplySpeed > 0) {
@@ -1155,7 +1153,7 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
      */
     function updateCompBorrowIndex(address rToken, Exp memory marketBorrowIndex) internal {
         CompMarketState storage borrowState = compBorrowState[rToken];
-        uint borrowSpeed = div_(mul_(compSpeeds[rToken], comBorrowRatio), expScale);
+        uint borrowSpeed = div_(mul_(compSpeeds[rToken], marketRatio[address(rToken)].borrow), expScale);
         uint blockNumber = getBlockNumber();
         uint deltaBlocks = sub_(blockNumber, uint(borrowState.block));
         if (deltaBlocks > 0 && borrowSpeed > 0) {
@@ -1305,12 +1303,6 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
         require(adminOrInitializing(), "only admin can change reservoir");
         reservoir = _reservoir;
         rewardAddress = _rewardAddress;
-    }
-
-    function _setCompBorrowRatio(uint newCompBorrowRatio) external {
-        require(adminOrInitializing(), "only admin can change ratio");
-        comBorrowRatio = newCompBorrowRatio;
-        comSupplyRatio = sub_(1e18, newCompBorrowRatio);
     }
 
     /**

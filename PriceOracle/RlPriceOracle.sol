@@ -46,7 +46,7 @@ contract RlPriceOracle is PriceOracle, IPriceCollector {
         if (_underlying == NativeAddress.nativeAddress()) {
             _underlying = native;
         }
-        return prices[_underlying];
+        return getPrice(_underlying);
     }
 
     function setUnderlyingPrice(RToken rToken, uint underlyingPriceMantissa) public onlyAdmin {
